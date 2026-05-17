@@ -1,0 +1,739 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script>
+(function(){
+  var __k="3dc61646-234b-45eb-aa0d-8435b1a468a2";
+  var __a=null;
+  var __preload=null;
+  if(!__k)return;
+  var _f=window.fetch;
+  // S3 URL → file_key 추출 후 __a 매핑 lookup → assets/ 로컬 경로 치환
+  // 응답에 새 signed URL이 와도 같은 file_key면 같은 assets/ → 영구 작동
+  function patchUrls(data){
+    if(!__a)return data;
+    try{
+      var s=JSON.stringify(data);
+      // 응답 안의 모든 S3 URL을 정규식으로 찾고, file_key 추출 → 매핑 lookup
+      s=s.replace(/https:\/\/prod-files-secure\.s3\.amazonaws\.com\/[^"\s<>]+/g,function(url){
+        var m=url.match(/\.amazonaws\.com\/([^?\\]+)/);
+        if(!m)return url;
+        var key=m[1].replace(/\\u002F/g,"/");
+        return __a[key]||url;
+      });
+      return JSON.parse(s);
+    }catch(e){return data;}
+  }
+  function callMisiso(method,path,body){
+    return _f("https://misiso.com/api/notion/deploy-proxy",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({deployKey:__k,path:path,method:method,body:body})
+    }).then(function(r){
+      var status=r.status;
+      return r.json().then(function(data){return {status:status,data:patchUrls(data)};});
+    });
+  }
+  // preload pattern — 페이지 로드와 병렬로 정적 fetch 호출 미리 시작
+  var __preloadCache={};
+  if(__preload){
+    for(var i=0;i<__preload.length;i++){
+      (function(c){
+        var key=c.method+":"+c.path+":"+(c.body?JSON.stringify(c.body):"");
+        __preloadCache[key]=callMisiso(c.method,c.path,c.body);
+      })(__preload[i]);
+    }
+  }
+  window.fetch=function(url,opts){
+    var u=typeof url==="string"?url:String(url);
+    if(!u.startsWith("/api/notion/"))return _f.apply(this,arguments);
+    var path=u.slice("/api/notion".length);
+    var method=(opts&&opts.method)||"GET";
+    var body;
+    try{body=opts&&opts.body?JSON.parse(opts.body):undefined;}catch(e){body=opts&&opts.body;}
+    var ck=method+":"+path+":"+(body?JSON.stringify(body):"");
+    var promise=__preloadCache[ck];
+    if(promise){delete __preloadCache[ck];}
+    else{promise=callMisiso(method,path,body);}
+    return promise.then(function(res){
+      return new Response(JSON.stringify(res.data),{
+        status:res.status,
+        headers:{"Content-Type":"application/json"}
+      });
+    });
+  };
+})();
+</script>
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://misiso.com" crossorigin/>
+<meta property="og:title" content="통증 팀원 교육 가이드"/>
+<meta property="og:description" content="통증 팀원 교육 가이드"/>
+<title>통증 팀원 교육 가이드</title>
+<meta name="description" content="통증 팀원 교육 가이드"/>
+<meta property="og:image" content="https://gregmas40-wq.github.io/notion-preview-3631f5a8/og-image-00vfcrz0.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://gregmas40-wq.github.io/notion-preview-3631f5a8/og-image-00vfcrz0.png"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2032%2032'%3E%3Crect%20width%3D'32'%20height%3D'32'%20rx%3D'6'%20fill%3D'%233b82f6'%2F%3E%3Ctext%20x%3D'16'%20y%3D'22'%20text-anchor%3D'middle'%20font-size%3D'18'%20fill%3D'white'%20font-family%3D'sans-serif'%3EP%3C%2Ftext%3E%3C%2Fsvg%3E"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+
+:root{
+  --bg1:#fffdf4;
+  --bg2:#eefaff;
+  --bg3:#f6fff2;
+  --text:#123047;
+  --muted:#5b6b7b;
+  --card:#ffffff;
+  --line:#e8eef5;
+  --brand:#06b6d4;
+  --brand2:#10b981;
+  --warn:#f59e0b;
+  --danger:#ef4444;
+  --shadow: 0 12px 30px rgba(18,48,71,.08);
+}
+
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family:Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255, 224, 130, .55), transparent 30%),
+    radial-gradient(circle at 90% 10%, rgba(125, 211, 252, .55), transparent 30%),
+    radial-gradient(circle at 80% 90%, rgba(187, 247, 208, .55), transparent 35%),
+    linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 45%, var(--bg3) 100%);
+  min-height:100vh;
+}
+button{ font-family:inherit; }
+
+.app{
+  width:min(1080px, calc(100% - 32px));
+  margin:0 auto;
+  padding:28px 0 56px;
+}
+
+.hero{
+  background: rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.75);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow);
+  border-radius:18px;
+  padding:22px 20px;
+}
+.badge{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background: rgba(6,182,212,.12);
+  color:#0e7490;
+  font-weight:700;
+  font-size:12px;
+}
+.hero h1{
+  margin:12px 0 8px;
+  font-size:32px;
+  letter-spacing:-.02em;
+  line-height:1.15;
+}
+.hl{ color: var(--brand); }
+.sub{
+  margin:0;
+  color:var(--muted);
+  line-height:1.45;
+  font-size:14px;
+}
+
+.tabs{
+  margin:14px 0 10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.tab{
+  border:1px solid var(--line);
+  background: rgba(255,255,255,.85);
+  border-radius:999px;
+  padding:9px 12px;
+  font-size:13px;
+  cursor:pointer;
+  transition: all .15s ease;
+}
+.tab:hover{ transform: translateY(-1px); }
+.tab.active{
+  border-color: rgba(6,182,212,.45);
+  box-shadow: 0 8px 18px rgba(6,182,212,.12);
+  background: #e6fbff;
+}
+
+.panel-wrap{
+  background: rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.75);
+  border-radius:18px;
+  box-shadow: var(--shadow);
+  padding:18px;
+}
+.panel{ display:none; }
+.panel.active{ display:block; }
+
+h2{
+  margin:0 0 10px;
+  font-size:20px;
+  letter-spacing:-.01em;
+}
+h3{
+  margin:0 0 8px;
+  font-size:16px;
+}
+.list{
+  margin:0;
+  padding-left:18px;
+  color:var(--text);
+  line-height:1.5;
+}
+.note{ margin:10px 0 0; color:var(--muted); font-size:13px; }
+.sub2{ margin:0 0 10px; color:var(--muted); }
+
+.card{
+  background: var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px;
+  box-shadow: 0 6px 16px rgba(18,48,71,.06);
+  margin:12px 0;
+}
+.card.yellow{ border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.06); }
+.card.green{ border-color: rgba(16,185,129,.35); background: rgba(16,185,129,.06); }
+.hi{ margin:0; font-weight:700; }
+blockquote{
+  margin:0;
+  padding:12px 12px;
+  border-left:4px solid rgba(6,182,212,.35);
+  background: rgba(6,182,212,.06);
+  border-radius:10px;
+  color: #0b3b46;
+  line-height:1.5;
+}
+
+.tip{
+  margin-top:12px;
+  padding:12px 14px;
+  border-radius:14px;
+  border:1px solid rgba(6,182,212,.25);
+  background: rgba(6,182,212,.08);
+  color:#0b3b46;
+}
+.tip.green{
+  border-color: rgba(16,185,129,.25);
+  background: rgba(16,185,129,.08);
+}
+
+.checklist{ display:flex; flex-direction:column; gap:10px; margin-top:8px; }
+.check{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:10px 12px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:12px;
+}
+.actions{ display:flex; gap:10px; margin-top:12px; }
+.btn{
+  border:1px solid rgba(6,182,212,.35);
+  background: rgba(6,182,212,.12);
+  color:#0e7490;
+  border-radius:12px;
+  padding:10px 12px;
+  cursor:pointer;
+  font-weight:700;
+}
+.btn.ghost{
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--muted);
+  font-weight:700;
+}
+
+.steps{ display:flex; flex-direction:column; gap:12px; margin-top:10px; }
+.step{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px;
+}
+.step-head{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin-bottom:8px;
+}
+.num{
+  width:30px; height:30px;
+  border-radius:999px;
+  display:grid; place-items:center;
+  background: rgba(6,182,212,.12);
+  color:#0e7490;
+  font-weight:800;
+}
+.red{ color: var(--danger); font-weight:800; }
+.orange{ color: #c2410c; font-weight:800; }
+
+.mini{
+  margin-top:10px;
+  border:1px dashed rgba(245,158,11,.45);
+  background: rgba(245,158,11,.06);
+  border-radius:12px;
+  padding:12px;
+}
+.mini.orange{
+  border-style:solid;
+  border-color: rgba(245,158,11,.35);
+}
+.mini-title{
+  margin:0 0 8px;
+  font-weight:800;
+  color:#92400e;
+}
+.two{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+.k{ margin:0 0 6px; font-weight:900; color:#0e7490; }
+
+.faq details{
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  padding:10px 12px;
+  margin:10px 0;
+}
+.faq summary{ cursor:pointer; font-weight:800; }
+.faq p{ margin:10px 0 0; color:var(--text); line-height:1.5; }
+
+.grid{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:12px;
+}
+
+.quiz{
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:14px;
+  padding:14px;
+}
+.q{ padding:12px 0; border-top:1px solid var(--line); }
+.q:first-child{ border-top:0; }
+.q-title{ margin:0 0 10px; font-weight:900; }
+.opts{ display:flex; flex-wrap:wrap; gap:10px; }
+.opt{
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:12px;
+  padding:10px 12px;
+  cursor:pointer;
+  transition: all .15s ease;
+}
+.opt:hover{ transform: translateY(-1px); }
+.opt.correct{
+  border-color: rgba(16,185,129,.45);
+  background: rgba(16,185,129,.12);
+}
+.opt.wrong{
+  border-color: rgba(239,68,68,.35);
+  background: rgba(239,68,68,.10);
+}
+.feedback{
+  margin:10px 0 0;
+  color:var(--muted);
+  font-size:13px;
+}
+.score{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.footer{
+  margin-top:14px;
+  color: rgba(18,48,71,.55);
+  font-size:12px;
+  text-align:center;
+}
+
+@media (max-width: 860px){
+  .hero h1{ font-size:26px; }
+  .two{ grid-template-columns: 1fr; }
+  .grid{ grid-template-columns: 1fr; }
+}
+</style>
+</head><body><rect width='32' height='32' rx='6' fill='%2306b6d4'/><text x='16' y='22' text-anchor='middle' font-size='18' fill='white' font-family='sans-serif'>통</text></svg>">
+
+<div class="app">
+  <header class="hero">
+    <p class="badge">데스크 신입 교육 · 통증 재활</p>
+    <h1>통증 재활 프로그램 상담<br><span class="hl">가이드</span></h1>
+    <p class="sub">원칙: <b>읽기 → 따라하기 → 롤플레이 → 체크</b><br>이 페이지를 순서대로 따라하면, “멘트/순서/FAQ”가 자동으로 몸에 붙습니다.</p>
+  </header>
+
+  <nav class="tabs" aria-label="교육 섹션">
+    <button class="tab active" data-tab="goal" type="button">0. 목표</button>
+    <button class="tab" data-tab="prep" type="button">1. 준비</button>
+    <button class="tab" data-tab="pre" type="button">2. 선상담</button>
+    <button class="tab" data-tab="post" type="button">3. 후상담</button>
+    <button class="tab" data-tab="herb" type="button">4. 한약</button>
+    <button class="tab" data-tab="faq" type="button">5. FAQ</button>
+    <button class="tab" data-tab="practice" type="button">6. 연습</button>
+    <button class="tab" data-tab="check" type="button">체크</button>
+  </nav>
+
+  <main class="panel-wrap">
+    <section class="panel active" id="tab-goal">
+      <h2>0) 오늘의 목표 (10분)</h2>
+      <ul class="list">
+        <li>환자에게 “통증 재활 프로그램”을 <b>쉽고 짧게</b> 설명할 수 있다.</li>
+        <li>진료 전/후 상담을 <b>순서대로</b> 진행할 수 있다.</li>
+        <li>주의사항·동의서·수납·예약까지 <b>누락 없이</b> 안내할 수 있다.</li>
+      </ul>
+      <div class="tip">
+        <b>합격 기준</b>: 환자가 “아, 이렇게 진행되는구나” 하고 <b>안심</b>하는가?
+      </div>
+    </section>
+
+    <section class="panel" id="tab-prep">
+      <h2>1) 상담 전 준비 체크리스트 (진료 전 30초)</h2>
+      <div class="checklist" id="prepChecklist">
+        <label class="check"><input type="checkbox"> 환자 이름/치료 부위/메모(레드메모 포함) 확인</label>
+        <label class="check"><input type="checkbox"> 오늘 진행 예정 시술: 침/부항/약침/추나/한약 여부 확인</label>
+        <label class="check"><input type="checkbox"> “빨간글씨(핵심 안내)” 여부 확인 (있으면 그대로 읽고 안내)</label>
+        <label class="check"><input type="checkbox"> 환자 질문 예상: 비용/횟수/부작용/회복기간</label>
+      </div>
+      <div class="actions">
+        <button class="btn" type="button" data-action="checkAll" data-target="prepChecklist">전체 체크</button>
+        <button class="btn ghost" type="button" data-action="uncheckAll" data-target="prepChecklist">전체 해제</button>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-pre">
+      <h2>2) 선상담(진료 전) 표준 멘트 — 그대로 따라 읽기</h2>
+
+      <div class="card yellow">
+        <h3>2-1. 적용대상 한 줄 확인</h3>
+        <p class="hi">적용대상: 만성 근골격계 통증, 통증+저림/당김, 두통, 잦은 재발·호전미약, 교통사고 후유증, 추나 등</p>
+      </div>
+
+      <div class="card">
+        <h3>2-2. 문진/경과 확인(질문 3개)</h3>
+        <ul class="list">
+          <li>“어느 동작에서 제일 불편하세요?”</li>
+          <li>“통증 말고 저림/당김 같은 신경 증상도 있으세요?”</li>
+          <li>“최근에 악화된 계기(일/운동/사고)가 있으셨나요?”</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>2-3. 연결 멘트(프로그램 존재 알리기)</h3>
+        <blockquote>“이런~ 증상들이 있으시네요. 저희 한의원은 00증상에 맞는 다양한 통증 재활프로그램이 있습니다.”</blockquote>
+      </div>
+
+      <div class="card">
+        <h3>2-4. 치료 필요성 설명(핵심 2문장)</h3>
+        <blockquote>“통증이 반복되거나 저린감 같은 신경 증상이 동반되는 경우, 초기에 적절한 치료를 받는 것이 중요합니다.<br>방치하면 점차 악화될 수 있어서, 상태에 맞춘 단계별 치료로 통증 개선과 기능 회복을 돕고 있습니다.”</blockquote>
+      </div>
+
+      <div class="card">
+        <h3>2-5. 원내 시술 안내(구성만 명확히)</h3>
+        <blockquote>“부항, 침 치료를 기본으로 하면서 통증 개선을 위한 한약, 다양한 약침, 추나 요법 등을 단계적으로 진행합니다.<br>오래된 통증은 유착된 부위를 풀어주는 치료를 함께 진행해 회복을 돕습니다.”</blockquote>
+        <p class="note">(+ 환자가 효과/자세한 내용 궁금해하면, 슬라이드 보여드리며 설명)</p>
+      </div>
+
+      <div class="card green">
+        <h3>2-6. 선상담 종료 멘트(진료 연결)</h3>
+        <blockquote>“보다 자세한 내용은 진료 후 원장님께서 말씀주실 예정입니다. 진료 보시고 나오시면 다시 안내드리겠습니다~”</blockquote>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-post">
+      <h2>3) 후상담(진료 후) 6단계 — 순서대로 진행</h2>
+      <div class="tip green">
+        암기 문장: <b>만불-주의-계획-동의-수납-예약</b><br>
+        (만족/불편 → 주의사항 → 계획/금액 → 동의서 → 수납 → 예약)
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-head"><span class="num">1</span><h3>만족도/불편감 확인</h3></div>
+          <blockquote>“오늘 치료는 잘 받으셨어요~? 치료 후 불편한 점은 없으셨나요? 뻐근하지는 않으신가요?”<br>“보통 치료 후 2~3일 정도는 뻐근하실 수 있습니다~”</blockquote>
+        </div>
+
+        <div class="step">
+          <div class="step-head"><span class="num">2</span><h3>시술 후 주의사항 안내(핵심)</h3></div>
+          <ul class="list">
+            <li>태반산삼/유착박리/추나의 경우: <b class="red">뻐근함 있을 수 있음</b> 안내</li>
+          </ul>
+          <div class="mini">
+            <p class="mini-title">* 유착박리술 멘트</p>
+            <blockquote>“오늘 받으신 유착박리 약침술은 엉킨 근육 결을 정상화시키기 위해 일반 침보다 침끝이 굵은 침을 사용해서, 좀 더 뻐근하실 수 있습니다.”</blockquote>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-head"><span class="num">3</span><h3>치료 계획 + 금액 안내</h3></div>
+          <blockquote>“000님 원장님께서 00시술 0회, 한약 0달 권하셨습니다.”</blockquote>
+          <p class="note"><b class="red">핵심</b>: 빨간글씨(핵심 안내) 확인 후 그대로 안내</p>
+        </div>
+
+        <div class="step">
+          <div class="step-head"><span class="num">4</span><h3>동의서 받기</h3></div>
+          <blockquote>“오늘 받으신 치료와 관련해서 안내사항과 환불규정 설명 후 동의서에 서명을 받겠습니다.”</blockquote>
+          <p class="note">(해당 동의서 차트메모에 기입: 예. 유착박리 동의서+)</p>
+          <div class="mini orange">
+            <p class="mini-title">동의서 설명(형광펜 체크 후 구두로 다시 1번)</p>
+            <ul class="list">
+              <li>건강보험 적용되는 <b class="red">진료비</b>는 내원 시마다 수납</li>
+              <li>“00시술은 비급여 비용이고, 내원 시마다 건강보험 적용되는 기본 침치료 비용은 발생합니다. (만원 정도)”</li>
+              <li>사용기한: 각 프로그램(시술) 기간 + 2개월 (사정 시 연장 가능 안내)</li>
+              <li>진행 횟수, 정상가/할인가 비교해서 안내</li>
+              <li>환불 시 정상가로 차감 후 환불 진행 안내</li>
+              <li>서명 받기</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-head"><span class="num">5</span><h3>수납(잔여 약침 횟수 안내)</h3></div>
+          <div class="two">
+            <div class="col">
+              <p class="k">초진</p>
+              <blockquote>“오늘 진료비, 기본 치료비 0원, 시술 프로그램 0원, 총 000원 입니다.”</blockquote>
+              <p class="note">(카드 결제 시 급여/비급여 2번으로 나누어 결제)</p>
+            </div>
+            <div class="col">
+              <p class="k">재진</p>
+              <blockquote>“오늘 00약침 0번째 중 0번째 맞으셨구요, 진료비 0원 입니다~”</blockquote>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-head"><span class="num">6</span><h3>예약 + 치료 독려(요일 먼저 제시)</h3></div>
+          <blockquote>“원장님께서 주 0회 치료 받자고 하셨습니다. 0요일 내원 가능하실까요?”</blockquote>
+          <p class="note">(주2회 계획 + 오늘이 월요일이면 “언제가 좋으세요?”보다 목/금 등 <b>요일을 먼저 제시</b>)</p>
+          <blockquote>“0개월 동안 꾸준히 치료하자고 하셨으니 시간 내셔서 꼭 내원해주세요~ 예약된 0요일에 뵙겠습니다~”</blockquote>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-herb">
+      <h2>4) 한약 처방이 있는 경우 — 추가로 반드시 하는 것</h2>
+      <ol class="list">
+        <li>주소지 확인</li>
+        <li>한약 배송 안내 멘트</li>
+      </ol>
+      <blockquote>“000님, 한약은 1제 15일분씩 탕전·배송되고, 다음 처방을 위해 약을 다 복용하실 즈음 전화 또는 카톡으로 안내드릴 예정입니다. 궁금하신 사항 있으세요?”</blockquote>
+      <ol class="list" start="3">
+        <li>노션 관리</li>
+        <li>한차트 탕전 확인(주소지/처방일/특이사항/다음 약 상담 안내일 저장 등)</li>
+      </ol>
+    </section>
+
+    <section class="panel" id="tab-faq">
+      <h2>5) 자주 하는 질문(FAQ) — 신입이 흔들리는 구간 모음</h2>
+
+      <div class="faq">
+        <details open>
+          <summary>Q1. 유착박리 시술 후 더 뻐근하고 아파요</summary>
+          <p>“유착박리 약침술은 <span class="orange">유착된 부분을 강하게 풀어주는 치료</span>이고,<br>
+          <span class="orange">일반 침보다 끝이 조금 굵고 날카로운 침</span>으로 시술되며,<br>
+          <span class="orange">재생을 촉진하는 약침</span>도 함께 들어가서 일반 침보다 좀 더 뻐근하실 수 있습니다.”</p>
+        </details>
+
+        <details>
+          <summary>Q2. 부항은 왜 하는 거예요?</summary>
+          <p>컵 내부의 음압으로 <span class="orange">혈액순환</span>을 돕고, 노폐물 배출을 촉진합니다.</p>
+        </details>
+
+        <details>
+          <summary>Q3. 허리 치료받았는데 통증이 다리로 내려간 것 같아요(통처변화)</summary>
+          <p><span class="orange">변화 과정에서 나타날 수 있는 증상</span>입니다. 말씀주신 내용 원장님께 전달드리겠습니다. 자세한 설명은 진료 보실 때 원장님께서 말씀주실 거예요~</p>
+        </details>
+
+        <details>
+          <summary>Q4. 통증은 줄었는데 이제 저리고 당겨요(양상이 바뀐 경우)</summary>
+          <p><span class="orange">변화 과정에서 나타날 수 있는 증상</span>입니다. 원장님께 전달드리겠습니다. 자세한 설명은 진료 보실 때 원장님께서 말씀주실 거예요~ (케이스마다 다름)</p>
+        </details>
+
+        <details>
+          <summary>Q5. 태반산삼약침이랑 그냥 약침이랑 뭐가 다른가요?</summary>
+          <p><span class="orange">산삼약침에 태반 성분이 추가</span>된 약침이며,<br>
+          <span class="orange">극심한 통증/심하게 뭉친 경우/재생력이 떨어진 경우</span>에 사용합니다. <span class="orange">염증 완화에도 더 효과적</span>입니다.</p>
+        </details>
+
+        <details>
+          <summary>Q6. 왜 이렇게 안 나아지고 변화가 없을까요?</summary>
+          <p>(예: 추나 10회 권유했는데 4회 진행 등)</p>
+          <p>“원장님께서 0회 치료 받자고 하셔서 아직 0회 더 남아계세요. <span class="orange">회복 속도는 환자분마다 다르셔서</span> 어떤 분은 1~2번으로 호전을 느끼고, 어떤 분은 변화가 없다가 갑자기 좋아지는 분도 계십니다.<br>
+          <span class="orange">치료 계획대로 꾸준히 치료받으시면 호전되실 거예요</span>. 원장님께도 전달드리겠습니다.”</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-practice">
+      <h2>6) 신입 연습법 (10분/일)</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>1일차</h3>
+          <p>2번(선상담) 멘트만 <b>끊기지 않고</b> 읽기</p>
+        </div>
+        <div class="card">
+          <h3>2일차</h3>
+          <p>3번(후상담) 6단계 <b>순서</b>만 외우기</p>
+        </div>
+        <div class="card">
+          <h3>3일차</h3>
+          <p>FAQ <b>1번, 6번</b>만 완벽히 말하기</p>
+        </div>
+        <div class="card">
+          <h3>4일차</h3>
+          <p>실제 케이스 3명 롤플레이(선상담 → 후상담)</p>
+        </div>
+      </div>
+      <div class="tip">
+        팁: “설득”보다 “안내”에 집중. <b>확정진단처럼 말하지 않기</b>.
+      </div>
+    </section>
+
+    <section class="panel" id="tab-check">
+      <h2>체크 (교육 후 2분)</h2>
+      <p class="sub2">아래 체크가 전부 “예”면 오늘 교육은 합격입니다.</p>
+
+      <div class="quiz" id="quizBox">
+        <div class="q">
+          <p class="q-title">Q1. 후상담 6단계 암기 문장은?</p>
+          <div class="opts">
+            <button class="opt" type="button" data-q="q1" data-a="wrong">주의-계획-동의-수납-예약-만족</button>
+            <button class="opt" type="button" data-q="q1" data-a="right">만불-주의-계획-동의-수납-예약</button>
+            <button class="opt" type="button" data-q="q1" data-a="wrong">만족-주의-동의-계획-수납-예약</button>
+          </div>
+          <p class="feedback" data-feedback="q1"></p>
+        </div>
+
+        <div class="q">
+          <p class="q-title">Q2. “빨간글씨(핵심 안내)”가 있으면?</p>
+          <div class="opts">
+            <button class="opt" type="button" data-q="q2" data-a="right">그대로 읽고 안내한다</button>
+            <button class="opt" type="button" data-q="q2" data-a="wrong">내가 더 좋은 표현으로 바꿔 말한다</button>
+          </div>
+          <p class="feedback" data-feedback="q2"></p>
+        </div>
+
+        <div class="q">
+          <p class="q-title">Q3. 예약 안내는 보통 어떻게 시작?</p>
+          <div class="opts">
+            <button class="opt" type="button" data-q="q3" data-a="wrong">“언제가 좋으세요?”만 질문한다</button>
+            <button class="opt" type="button" data-q="q3" data-a="right">가능한 요일을 먼저 제시한다(예: 목/금)</button>
+          </div>
+          <p class="feedback" data-feedback="q3"></p>
+        </div>
+
+        <div class="score">
+          <p><b>점수:</b> <span id="scoreNow">0</span> / 3</p>
+          <button class="btn" type="button" data-action="resetQuiz">다시 풀기</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© hyung clinic · Desk Training Guide</p>
+  </footer>
+</div><script>
+(function () {
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const panels = Array.from(document.querySelectorAll('.panel'));
+
+  function openTab(key) {
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === key));
+    panels.forEach(p => p.classList.toggle('active', p.id === `tab-${key}`));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => openTab(btn.dataset.tab));
+  });
+
+  // checklist controls
+  function setAllCheckbox(targetId, checked) {
+    const box = document.getElementById(targetId);
+    if (!box) return;
+    box.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = checked; });
+  }
+
+  document.addEventListener('click', (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLElement)) return;
+    const action = el.dataset.action;
+    if (!action) return;
+
+    if (action === 'checkAll') {
+      setAllCheckbox(el.dataset.target, true);
+    } else if (action === 'uncheckAll') {
+      setAllCheckbox(el.dataset.target, false);
+    } else if (action === 'resetQuiz') {
+      resetQuiz();
+    }
+  });
+
+  // quiz
+  const ANSWER_STATE = { q1: null, q2: null, q3: null };
+  const TOTAL = Object.keys(ANSWER_STATE).length;
+
+  function setFeedback(qKey, msg) {
+    const p = document.querySelector(`[data-feedback="${qKey}"]`);
+    if (p) p.textContent = msg;
+  }
+
+  function calcScore() {
+    return Object.values(ANSWER_STATE).filter(v => v === true).length;
+  }
+
+  function renderScore() {
+    const el = document.getElementById('scoreNow');
+    if (el) el.textContent = String(calcScore());
+  }
+
+  function resetQuiz() {
+    Object.keys(ANSWER_STATE).forEach(k => { ANSWER_STATE[k] = null; setFeedback(k, ''); });
+    document.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+    renderScore();
+  }
+
+  document.querySelectorAll('.opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const q = btn.dataset.q;
+      const a = btn.dataset.a;
+      if (!q || !a) return;
+
+      // lock per question: allow reselect
+      document.querySelectorAll(`.opt[data-q="${q}"]`).forEach(b => b.classList.remove('correct', 'wrong'));
+
+      const isRight = a === 'right';
+      ANSWER_STATE[q] = isRight;
+
+      btn.classList.add(isRight ? 'correct' : 'wrong');
+      setFeedback(q, isRight ? '정답! 좋습니다.' : '틀렸습니다. 해당 섹션으로 돌아가 멘트를 다시 확인해주세요.');
+      renderScore();
+
+      const score = calcScore();
+      if (score === TOTAL) {
+        setFeedback(q, '정답! 오늘 교육 합격입니다. 실전에서는 “천천히, 또박또박”만 유지하세요.');
+      }
+    });
+  });
+
+  // first render
+  renderScore();
+})();
+</script>
+</body></html>
